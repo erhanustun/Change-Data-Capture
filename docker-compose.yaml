@@ -1,0 +1,109 @@
+version: '3'
+services:
+  zookeeper:
+    image: quay.io/debezium/zookeeper:1.9
+    ports:
+     - 2181:2181
+     - 2888:2888
+     - 3888:3888
+    platform: linux/amd64
+  kafka:
+    image: quay.io/debezium/kafka:1.9
+    ports:
+     - 9092:9092
+    links:
+     - zookeeper
+    environment:
+     - ZOOKEEPER_CONNECT=zookeeper:2181
+    platform: linux/amd64
+  postgres:
+    image: quay.io/debezium/example-postgres:1.9
+    ports:
+     - 5433:5432
+    environment:
+     - POSTGRES_USER=postgres
+     - POSTGRES_PASSWORD=postgres
+     - POSTGRES_DB=postgres
+    platform: linux/amd64
+  connect:
+    image: quay.io/debezium/connect:1.9
+    ports:
+     - 8083:8083
+    links:
+     - kafka
+     - postgres
+    platform: linux/amd64
+    environment:
+     - BOOTSTRAP_SERVERS=kafka:9092
+     - GROUP_ID=1
+     - CONFIG_STORAGE_TOPIC=my_connect_configs
+     - OFFSET_STORAGE_TOPIC=my_connect_offsets
+     - STATUS_STORAGE_TOPIC=my_connect_statuses
+  spark-master:
+    container_name: spark-master
+    build: ./spark
+    platform: linux/amd64
+    ports:
+     - "4040:4040"
+     - "7077:7077"
+     - "8080:8080"
+     - "18080:18080"
+    command: sh /opt/bitnami/spark/spark-master.sh
+    volumes: 
+    - ./spark/spark-master.sh:/opt/bitnami/spark/spark-master.sh
+  spark-worker:
+    container_name: spark-worker
+    build: ./spark
+    platform: linux/amd64
+    depends_on:
+     - spark-master
+    environment:
+     - SPARK_WORKER_MEMORY=2g
+     - SPARK_WORKER_CORES=2
+    ports:
+     - "28081-28085:8081"
+    command: sh /opt/bitnami/spark/spark-worker.sh
+    volumes: 
+    - ./spark/spark-worker.sh:/opt/bitnami/spark/spark-worker.sh
+  spark-client:
+    container_name: spark-client
+    build: ./spark_client
+    platform: linux/amd64
+    ports:
+     - "8888:8888"
+     - "4041:4040"
+    volumes:
+     - ./spark_client/examples:/opt/examples
+    command: sleep infinity
+# S3 compatible object storage: MinIO
+  minio:
+    container_name: minio
+    image: "minio/minio:RELEASE.2021-10-13T00-23-17Z"
+    platform: linux/amd64
+    volumes:
+     - minio:/data
+    ports:
+     - "9000:9000"
+     - "9001:9001"
+    environment:
+     MINIO_ROOT_USER: "cdc-user"
+     MINIO_ROOT_PASSWORD: "cdc-password"
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://127.0.0.1:9000/minio/health/live"
+        ]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+volumes:
+  minio:
+  spark-client:
+  spark-master:
+  spark-worker:
+
+ 
