@@ -49,8 +49,8 @@ INSERT INTO transactions (customerId, customerFName, customerZipcode)
 VALUES (106, 'Perez', 80126);
 
 # Step 6: Write to Minio
-- Create a bucket cdc-bucket
 - Connect MinIO Console: http://localhost:9001
+- Create a bucket cdc-bucket
 
 # Step 7: Spark Streaming
 
