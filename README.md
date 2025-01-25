@@ -50,6 +50,7 @@ VALUES (106, 'Perez', 80126);
 
 # Step 6: Write to Minio
 - Create a bucket cdc-bucket
+- Connect MinIO Console: http://localhost:9001
 
 # Step 7: Spark Streaming
 
